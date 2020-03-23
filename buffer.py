@@ -1,6 +1,5 @@
 import numpy as np
 
-
 class Buffer(object):
     def __init__(self, max_len):
         self.max_len = max_len
@@ -16,3 +15,7 @@ class Buffer(object):
 
     def get_recent(self):
         return self.data[-1]
+
+    @property
+    def length(self):
+        return len(self.data)

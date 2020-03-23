@@ -4,9 +4,8 @@ import gym
 from network import Network
 
 class AsynMB(gym.Env):
-    def __init__(self, env_data, replay_buffer, update_interval, n_pretrain):
+    def __init__(self, env_data, replay_buffer, n_pretrain=100):
         self.replay_buffer = replay_buffer
-        self.update_interval = update_interval
         self.observation_space = env_data['observation_space']
         self.action_space = env_data['action_space']
         self.state = None
