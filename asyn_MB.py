@@ -19,7 +19,7 @@ class AsynMB(gym.Env):
 
     def pretrain_network(self, n_pretrain):
         for i in range(n_pretrain):
-            replay_batch = self.replay_buffer.get_batch()
+            replay_batch = self.replay_buffer.get_batch(num=64)
             self.reward_network.train(replay_batch)
             self.next_state_network.train(replay_batch)
 

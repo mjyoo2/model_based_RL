@@ -16,7 +16,7 @@ class Network(object):
         self.loss = tf.reduce_sum(tf.square(self.network_output - self.output_data))
 
     def build_network(self, layer_structure):
-        input_layer = tf.placeholder(dtype=np.float32, shape=(self.input_shape, 1), name='input_layer')
+        input_layer = tf.placeholder(dtype=np.float32, shape=(1, self.input_shape), name='input_layer')
         temp_layer = input_layer
         for idx, units in enumerate(layer_structure):
             temp_layer = tf.layers.dense(inputs=temp_layer, units=units, activation=tf.nn.relu,
