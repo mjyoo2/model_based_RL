@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class ReplayBuffer(object):
+class Buffer(object):
     def __init__(self, max_len):
         self.max_len = max_len
         self.data = []
@@ -13,3 +13,6 @@ class ReplayBuffer(object):
 
     def get_batch(self, num):
         return np.random.choice(self.data, num)
+
+    def get_recent(self):
+        return self.data[-1]
