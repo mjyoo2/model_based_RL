@@ -1,42 +1,63 @@
+import time
+import numpy as np
+
 from asyn_MB import AsynMB
-from multiprocessing import Process, current_process
-from buffer import Buffer
 from stable_baselines.common.vec_env import SubprocVecEnv
 
-import copy
+class MBRL(object):
+    def __init__(self, algo, env, replay_buffer, data_pipe, callback):
+        self.replay_buffer = replay_buffer
+        self.data_pipe = data_pipe
 
-class MB_learner(object):
-    def __init__(self, algo, real_env, n_model):
-        self.replay_buffer = Buffer(max_len=50000)
-        self.real_env = real_env
-        env_data = {'observation_space': self.real_env.observation_space, 'action_space': self.real_env.action_space}
-        MB_env = SubprocVecEnv([lambda: AsynMB(env_data=env_data, replay_buffer=self.replay_buffer) for _ in range(n_model)])
-        self.real_agent = algo(real_env)
-        self.MB_agent = algo(MB_env)
-        self.learning_done = False
+        self.callback = callback
+        self.MB_agent = algo
+        self.MB_env = env
+
+        self.data_pipe.put_data('learning_done', False)
 
     def learn(self, total_timesteps):
-        data_process = Process(target=self.get_data, args=())
-        data_process.start()
-        MB_process = Process(target=self.MB_learn, args=(total_timesteps, ))
-        MB_process.start()
-        MB_process.join()
-        self.learning_done = True
-        data_process.join()
+        # while self.replay_buffer.length < 10000:
+        #     time.sleep(1)
 
-    def get_data(self):
-        while not self.learning_done:
+        self.MB_agent = self.MB_agent(self.MB_env)
+        self.data_pipe.put_data('MB_agent_parameters', self.MB_agent.get_parameters())
+        self.data_pipe.put_data('MB_learing_start', True)
+
+        self.MB_agent.learn(total_timesteps, log_interval=10, callback=self.callback)
+        self.data_pipe.put_data('learning_done', True)
+
+
+class RealAgent(object):
+    def __init__(self, algo, real_env, replay_buffer, data_pipe, verbose):
+        self.replay_buffer = replay_buffer
+        self.data_pipe = data_pipe
+        self.verbose = 1
+
+        self.real_env = real_env
+        self.real_agent = algo(real_env)
+
+        env_data = {'observation_space': real_env.observation_space, 'action_space': real_env.action_space}
+        self.data_pipe.put_data('env_data', env_data)
+
+    def learn(self, episode_num):
+        epi_reward_list = []
+        if self.data_pipe.get_data('MB_learning_start'):
             self.get_model()
+        for i in range(episode_num):
+            reward_list = []
             done = False
             state = self.real_env.reset()
             while not done:
-                action = self.real_agent.predict(state)
+                action, _ = self.real_agent.predict(state)
                 next_state, reward, done, info = self.real_env.step(action)
-                self.replay_buffer.add({'state': state, 'action': action, 'next_state': next_state, 'reward': reward})
+                reward_list.append(reward)
+                self.replay_buffer.add({'state': state, 'action': action, 'next_state': next_state, 'reward': [reward]})
+            if self.verbose == 1:
+                # print('{} / 10 episode_reward: '.format(i), np.sum(reward_list))
+                epi_reward_list.append(np.sum(reward_list))
+        if self.verbose == 1:
+            print('episode_reward: ', np.mean(epi_reward_list))
 
     def get_model(self):
-        self.real_agent = copy.deepcopy(self.MB_agent)
-        self.real_agent.env = self.real_env
-
-    def MB_learn(self, total_timesteps):
-        self.MB_agent.learn(total_timesteps)
+        parameters = self.data_pipe.get_data('MB_agent_parameters')
+        self.real_agent.load_parameters(parameters)

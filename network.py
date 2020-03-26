@@ -1,43 +1,40 @@
-import tensorflow as tf
-import numpy as np
+from keras.layers import Lambda, Input, Dense
+from keras.models import Model
+from keras.datasets import mnist
+from keras.losses import mse, binary_crossentropy
+from keras.utils import plot_model
+from keras import backend as K
 
+import numpy as np
+import tensorflow as tf
 
 class Network(object):
-    def __init__(self, layer_structure, input_shape, output_shape, learning_rate=0.001, mode='next_state'):
+    def __init__(self, layer_structure, input_shape, output_shape, learning_rate=0.001):
         self.input_shape = input_shape
         self.output_shape = output_shape
-        self.sess = tf.Session()
         self.learning_rate = learning_rate
-        self.mode = mode
 
-        self.network_input, self.network_output = self.build_network(layer_structure)
-        self.optimizer = tf.train.AdamOptimizer(self.learning_rate)
-        self.output_data = tf.placeholder(dtype=np.float32, shape=(self.output_shape, 1), name='output_data')
-        self.loss = tf.reduce_sum(tf.square(self.network_output - self.output_data))
+        self.network = self.build_network(layer_structure)
+        self.network.compile(loss='mse', optimizer='adam')
 
     def build_network(self, layer_structure):
-        input_layer = tf.placeholder(dtype=np.float32, shape=(1, self.input_shape), name='input_layer')
-        temp_layer = input_layer
-        for idx, units in enumerate(layer_structure):
-            temp_layer = tf.layers.dense(inputs=temp_layer, units=units, activation=tf.nn.relu,
-                                         kernel_initializer=tf.initializers.orthogonal)
-        output_layer = tf.layers.dense(inputs=temp_layer, units=self.output_shape, activation=tf.nn.relu,
-                                         kernel_initializer=tf.initializers.orthogonal)
-        return input_layer, output_layer
+        inputs = Input(shape=(self.input_shape, ), name='encoder_input')
+        x = inputs
+        for dims in layer_structure:
+            x = Dense(dims, activation='relu')(inputs)
+        output = Dense(self.output_shape)(x)
+        outputs = Model(inputs, output, name='model')
+        return outputs
 
-    def train(self, replay_batch):
-        objective = self.optimizer.minimize(self.loss)
-        loss_list = []
-        for replay in replay_batch:
-            input_data = np.concatenate([replay['state'].flatten(), replay['action'].flatten()])
-            _, loss = self.sess.run(objective, feed_dict={self.network_input: input_data, self.output_data: replay[self.mode]})
-            loss_list.append(loss)
-        return np.mean(loss_list)
+    def train(self, input_data, output_data, training_epochs):
+        input_data = np.array(input_data).reshape([-1, self.input_shape])
+        output_data = np.array(output_data).reshape([-1, self.output_shape])
+        self.network.fit(input_data, output_data, nb_epoch=training_epochs, batch_size=64)
+        return
 
-    def predict(self, state, action):
-        input_data = np.concatenate([state.flatten(), action.flatten()])
-        output = self.sess.run(self.network_output, feed_dict={self.network_input: input_data})
-        return output
+    def predict(self, input):
+        self.network.predict(input)
+        return input
 
     def save(self, save_path):
         pass
