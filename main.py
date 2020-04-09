@@ -27,15 +27,15 @@ if __name__ == '__main__':
     data.put_data('MB_learning_start', False)
 
     real_env = gym.make('LunarLanderContinuous-v2')
-    algo = lambda env: PPO2(MlpPolicy, env, n_steps=64, policy_kwargs={'layers': [64, 64, 64, 64], 'act_fun': tf.nn.relu})
+    algo = lambda env: PPO2(MlpPolicy, env, n_steps=64, policy_kwargs={'layers': [256, 256, 256, 256], 'act_fun': tf.nn.relu})
 
     real_model = RealAgent(algo=algo, real_env=real_env, replay_buffer=replay_buffer, data_pipe=data, verbose=1)
     real_model.learn(50000)
 
     MB_env = SubprocVecEnv([lambda: AsynMB(env_data=data.get_data('env_data'), replay_buffer=replay_buffer, n_steps=256) for _ in range(4)])
 
-    algo = lambda env: PPO3(MlpPolicy, env, verbose=1, tensorboard_log='C:/model/model_based_RL/', n_steps=64,
-                            policy_kwargs={'layers': [64, 64, 64, 64], 'act_fun': tf.nn.relu})
+    algo = lambda env: PPO3(MlpPolicy, env, verbose=1, tensorboard_log='C:/model/model_based_RL/', n_steps=128,
+                            policy_kwargs={'layers': [256, 256, 256, 256], 'act_fun': tf.nn.relu})
 
     Callback = PPOCallback(get_data=real_model.learn, verbose=0)
     MB_model = MBRL(algo=algo, env=MB_env, replay_buffer=replay_buffer, data_pipe=data, callback=Callback)

@@ -59,8 +59,13 @@ class Buffer(object):
             pkl.dump(save_dict, f)
 
     def load(self):
-        with open('./replay_data/data.pkl', 'rb') as f:
-            load_dict = pkl.load(f)
+        while True:
+            try:
+                with open('./replay_data/data.pkl', 'rb') as f:
+                    load_dict = pkl.load(f)
+                break
+            except:
+                pass
         self.reward_data = load_dict['reward_data']
         self.next_state_data = load_dict['next_state_data']
         self.state_data = load_dict['state_data']

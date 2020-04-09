@@ -2,23 +2,24 @@ from keras.layers import Lambda, Input, Dense, BatchNormalization, ReLU, Concate
 from keras.models import Model
 from keras.optimizers import Adam
 from keras.regularizers import l2
-from keras.activations import tanh
-from keras.datasets import mnist
-from keras.losses import mse, binary_crossentropy
-from keras.utils import plot_model
-from keras import backend as K
 
 import numpy as np
 import tensorflow as tf
+import os
 
 class Network(object):
-    def __init__(self, layer_structure, action_shape, state_shape, output_shape, loss='mse', metrics=None):
+    def __init__(self, layer_structure, action_shape, state_shape, output_shape, name, last_layer=None, loss='mse', metrics=None):
         self.action_shape = action_shape
         self.state_shape = state_shape
         self.output_shape = output_shape
+        self.last_layer = last_layer
 
-        self.network = self.build_network(layer_structure)
+        self.network = self.build_network(layer_structure, last_layer)
         self.network_compile(loss, Adam(learning_rate=0.001), metrics)
+        self.save_path = './weights/{}/init_weight.hdf5'.format(name)
+        if not os.path.isdir('./weights/{}'.format(name)):
+            os.mkdir('./weights/{}'.format(name))
+        self.network.save_weights(self.save_path)
 
     def network_compile(self, loss, optimizer, metrics):
         if metrics is None:
@@ -26,7 +27,7 @@ class Network(object):
         else:
             self.network.compile(loss=loss, optimizer=optimizer, metrics=[metrics])
 
-    def build_network(self, layer_structure):
+    def build_network(self, layer_structure, last_activation):
         actions_input = Input(shape=(self.action_shape, ), name='action_input')
         actions = Dense(32, activation='relu')(actions_input)
         actions = BatchNormalization()(actions)
@@ -40,7 +41,10 @@ class Network(object):
             x = Dense(dims, kernel_initializer='orthogonal', kernel_regularizer=l2(0.01))(x)
             x = BatchNormalization()(x)
             x = ReLU()(x)
-        output = Dense(self.output_shape)(x)
+        if last_activation is None:
+            output = Dense(self.output_shape)(x)
+        else:
+            output = Dense(self.output_shape, activation=last_activation)(x)
         outputs = Model([actions_input, states_input], output, name='model')
         return outputs
 
@@ -57,11 +61,8 @@ class Network(object):
         input_data = [action_data, state_data]
         return self.network.predict(input_data)
 
-    def save(self, save_path):
-        pass
-
-    def load(self, load_path):
-        pass
+    def reinit(self):
+        self.network.load_weights(self.save_path)
 
 class DoneNetwork(Network):
     def __init__(self, layer_structure, action_shape, state_shape, output_shape,
