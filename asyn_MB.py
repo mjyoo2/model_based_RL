@@ -25,8 +25,8 @@ class AsynMB(gym.Env):
         state_shape = self.observation_space.shape[0]
         next_state_shape = self.observation_space.shape[0]
         self.reward_network = Network(layer_structure=[256, 256], action_shape=action_shape, state_shape=state_shape,
-                                      output_shape=1, name='{}/reward_network'.format(name), last_layer='tanh')
-        self.next_state_network = Network(layer_structure=[256, 256],action_shape=action_shape, state_shape=state_shape,
+                                      output_shape=1, name='{}/reward_network'.format(name))
+        self.next_state_network = Network(layer_structure=[256, 256], action_shape=action_shape, state_shape=state_shape,
                                           output_shape=next_state_shape, name='{}/next_state_network'.format(name))
 
     def train_network(self, train):

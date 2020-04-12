@@ -6,6 +6,7 @@ class wrap_env(gym.Env):
     def __init__(self, env, buffer, delay):
         self.env = env
         self.buffer = buffer
+        self.buffer.load()
         self.delay = delay
         self.state = None
 
@@ -15,8 +16,16 @@ class wrap_env(gym.Env):
     def step(self, action):
         time.sleep(self.delay)
         state, reward, done, info = self.env.step(action)
-        reward = 2/(1+np.exp(-reward/10))-1
+        reward = np.clip(reward, a_max=10, a_min=-10)
+        reward = 2 / (1 + np.exp(-reward/10)) - 1
+        if np.isnan(self.state.any()):
+            print("state is NAN!")
+        if np.isnan(action.any()):
+            print("action is NAN!")
+        if np.isnan(reward):
+            print("reward is NAN!")
         self.buffer.add({'state': self.state, 'action': action, 'next_state': state, 'reward': [reward], 'done': done})
+        self.state = state
         return state, reward, done, info
 
     def reset(self):

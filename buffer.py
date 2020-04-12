@@ -66,6 +66,7 @@ class Buffer(object):
                 break
             except:
                 pass
+        print("buffer loading...")
         self.reward_data = load_dict['reward_data']
         self.next_state_data = load_dict['next_state_data']
         self.state_data = load_dict['state_data']

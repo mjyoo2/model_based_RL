@@ -15,4 +15,4 @@ import gym
 if __name__ == "__main__":
     env = wrap_env(gym.make('LunarLanderContinuous-v2'), Buffer(50000), delay=0)
     agent = PPO2(MlpPolicy, env, verbose=1, tensorboard_log='./test_tensorboard')
-    agent.learn(total_timesteps=5000000, log_interval=10, callback=CustomCallback())
+    agent.learn(total_timesteps=5000000, log_interval=10)
