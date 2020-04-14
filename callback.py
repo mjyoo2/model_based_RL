@@ -12,6 +12,20 @@ class MBCallback(BaseCallback):
         """
         This method is called before the first rollout starts.
         """
+        dir_list = os.listdir('./network')
+        if 'parameters.pkl' in dir_list:
+            while True:
+                try:
+                    with open('./network/parameters.pkl', 'rb') as f:
+                        parameters = pkl.load(f)
+                    break
+                except:
+                    pass
+            try:
+                os.remove('./network/parameters.pkl')
+            except:
+                pass
+        self.model.load_parameters(parameters)
 
     def _on_rollout_start(self) -> None:
         """
@@ -66,12 +80,20 @@ class CustomCallback(BaseCallback):
     def __init__(self, verbose=0):
         super(CustomCallback, self).__init__(verbose)
         self.data_save_param = 1
+        self.alpha = 0.1
 
     def _on_training_start(self) -> None:
         """
         This method is called before the first rollout starts.
         """
-        pass
+        parameters = self.model.get_parameters()
+        while True:
+            try:
+                with open('./network/parameters.pkl', 'wb') as f:
+                    pkl.dump(parameters, f)
+                break
+            except:
+                pass
 
     def _on_rollout_start(self) -> None:
         """
@@ -96,6 +118,7 @@ class CustomCallback(BaseCallback):
         return True
 
     def _on_rollout_end(self) -> None:
+        self.alpha *= 0.9998
         dir_list = os.listdir('./network')
         if 'mb_parameters.pkl' in dir_list:
             parameters = self.model.get_parameters()
@@ -108,7 +131,7 @@ class CustomCallback(BaseCallback):
                     pass
             key = parameters.keys()
             for layer_key in key:
-                parameters[layer_key] = 0.95 * parameters[layer_key] + 0.05 * mb_parameters[layer_key]
+                parameters[layer_key] = (1 - self.alpha) * parameters[layer_key] + self.alpha * mb_parameters[layer_key]
             self.model.load_parameters(parameters)
             while True:
                 try:
