@@ -33,15 +33,16 @@ class MBCallback(BaseCallback):
         using the current policy.
         This event is triggered before collecting new samples.
         """
-        dir_list = os.listdir('./replay_data')
-        if 'data.pkl' in dir_list:
-            while True:
-                try:
-                    self.model.env.env_method('train_network', 25)
-                    os.remove('./replay_data/data.pkl')
-                    break
-                except:
-                    pass
+
+        while True:
+            try:
+                self.model.env.env_method('train_network', 25)
+                dir_list = os.listdir('./replay_data')
+                for file in dir_list:
+                    os.remove('./replay_data/{}'.format(file))
+                break
+            except:
+                pass
 
     def _on_step(self) -> bool:
         """
@@ -101,8 +102,8 @@ class CustomCallback(BaseCallback):
         using the current policy.
         This event is triggered before collecting new samples.
         """
-        if self.data_save_param * 10000 < self.num_timesteps:
-            self.model.env.env_method('buffer_save')
+        if self.data_save_param * 25000 < self.num_timesteps:
+            self.model.env.env_method('buffer_save', self.data_save_param)
             self.data_save_param += 1
 
 
@@ -118,7 +119,6 @@ class CustomCallback(BaseCallback):
         return True
 
     def _on_rollout_end(self) -> None:
-        self.alpha *= 0.9998
         dir_list = os.listdir('./network')
         if 'mb_parameters.pkl' in dir_list:
             parameters = self.model.get_parameters()

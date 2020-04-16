@@ -52,17 +52,21 @@ class Buffer(object):
         idx = np.random.randint(low=0, high=len(self.state_data)-1)
         return self.state_data[idx]
 
-    def save(self):
+    def save(self, num):
         save_dict = {'reward_data': self.reward_data, 'next_state_data': self.next_state_data, 'state_data': self.state_data,
                      'action_data': self.action_data}
-        with open('./replay_data/data.pkl', 'wb') as f:
+        with open('./replay_data/data_{}.pkl'.format(num%4), 'wb') as f:
             pkl.dump(save_dict, f)
 
-    def load(self):
+    def load(self, name):
         while True:
             try:
-                with open('./replay_data/data.pkl', 'rb') as f:
-                    load_dict = pkl.load(f)
+                if name:
+                    with open('./replay_data/data_{}.pkl'.format(name), 'rb') as f:
+                        load_dict = pkl.load(f)
+                else:
+                    with open('./replay_data/data.pkl'.format(name), 'rb') as f:
+                        load_dict = pkl.load(f)
                 break
             except:
                 pass

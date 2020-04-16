@@ -6,7 +6,7 @@ class wrap_env(gym.Env):
     def __init__(self, env, buffer, delay):
         self.env = env
         self.buffer = buffer
-        self.buffer.load()
+        self.buffer.load(None)
         self.delay = delay
         self.state = None
 
@@ -36,5 +36,5 @@ class wrap_env(gym.Env):
     def render(self, mode='human'):
         self.env.render()
 
-    def buffer_save(self):
-        self.buffer.save()
+    def buffer_save(self, name):
+        self.buffer.save(name)

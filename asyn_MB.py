@@ -17,6 +17,7 @@ class AsynMB(gym.Env):
         self.timesteps = 0
         self.verbose = verbose
         self.n_steps = n_steps
+        self.name = name
 
         if not os.path.isdir('./weights/{}'.format(name)):
             os.mkdir('./weights/{}'.format(name))
@@ -24,18 +25,20 @@ class AsynMB(gym.Env):
         action_shape = self.action_space.shape[0]
         state_shape = self.observation_space.shape[0]
         next_state_shape = self.observation_space.shape[0]
-        self.reward_network = Network(layer_structure=[256, 256], action_shape=action_shape, state_shape=state_shape,
+        self.reward_network = Network(layer_structure=[64, 64, 64, 64], action_shape=action_shape, state_shape=state_shape,
                                       output_shape=1, name='{}/reward_network'.format(name))
-        self.next_state_network = Network(layer_structure=[256, 256], action_shape=action_shape, state_shape=state_shape,
+        self.next_state_network = Network(layer_structure=[64, 64, 64, 64], action_shape=action_shape, state_shape=state_shape,
                                           output_shape=next_state_shape, name='{}/next_state_network'.format(name))
 
     def train_network(self, train):
-        self.replay_buffer.load()
-        self.reward_network.reinit()
-        self.next_state_network.reinit()
-        state_data, action_data, next_state_data, reward_data = self.replay_buffer.get_dataset()
-        self.reward_network.train(state_data, action_data, reward_data, training_epochs=train)
-        self.next_state_network.train(state_data, action_data, next_state_data, training_epochs=train)
+        dir_list = os.listdir('./replay_data')
+        if 'data_{}.pkl'.format(self.name) in dir_list:
+            self.replay_buffer.load(self.name)
+            self.reward_network.reinit()
+            self.next_state_network.reinit()
+            state_data, action_data, next_state_data, reward_data = self.replay_buffer.get_dataset()
+            self.reward_network.train(state_data, action_data, reward_data, training_epochs=train)
+            self.next_state_network.train(state_data, action_data, next_state_data, training_epochs=train)
 
     def step(self, action):
         self.timesteps += 1
