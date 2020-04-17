@@ -1,12 +1,8 @@
-import tensorflow.compat.v1 as tf
 import numpy as np
 import gym
 import os
-from network import Network, DoneNetwork
+from network import Network
 
-
-def decode_reward(reward):
-    return -100 * np.log(2*reward/(reward+1))
 
 class AsynMB(gym.Env):
     def __init__(self, env_data, replay_buffer, n_steps, name, verbose=1):

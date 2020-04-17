@@ -1,30 +1,6 @@
 import numpy as np
 import pickle as pkl
-import os
-from multiprocessing import managers
-from stable_baselines.common.buffers import ReplayBuffer
 
-class CommReplayBuffer(ReplayBuffer):
-    def add(self, obs_t, action, reward, obs_tp1, done):
-        data = (obs_t, action, reward, obs_tp1, done)
-        if reward < -1:
-            data = (obs_t, action, -1, obs_tp1, done)
-        if reward > 1:
-            data = (obs_t, action, 1, obs_tp1, done)
-
-        if self._next_idx >= len(self._storage):
-            self._storage.append(data)
-        else:
-            self._storage[self._next_idx] = data
-        self._next_idx = (self._next_idx + 1) % self._maxsize
-
-    def save(self):
-        save_data = self._encode_sample(np.arange(len(self)))
-        save_dict = {'state_data': save_data[0], 'action_data': save_data[1], 'reward_data': save_data[2],
-                     'next_state_data': save_data[3]}
-        file_list = os.listdir('D:/memory/replay_data/')
-        with open('D:/memory/replay_data/data_{}.pkl'.format(len(file_list)), 'wb') as f:
-            pkl.dump(save_dict, f)
 
 class Buffer(object):
     def __init__(self, max_len):
@@ -79,13 +55,3 @@ class Buffer(object):
     @property
     def length(self):
         return len(self.state_data)
-
-class data_pipe(object):
-    def __init__(self, data):
-        self.data = data
-
-    def get_data(self, key):
-        return self.data[key]
-
-    def put_data(self, key, new_data):
-        self.data[key] = new_data
