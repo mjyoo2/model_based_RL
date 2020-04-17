@@ -11,6 +11,20 @@ from buffer import Buffer
 
 import gym
 
+if not os.path.isdir('./replay_data'):
+    os.mkdir('./replay_data')
+
+if not os.path.isdir('./mb_tensorboard'):
+    os.mkdir('./mb_tensorboard')
+
+if not os.path.isdir('./weights'):
+    os.mkdir('./weights')
+
+if not os.path.isdir('./mb_sub_tensorboard'):
+    os.mkdir('./mb_sub_tensorboard')
+
+if not os.path.isdir('./network'):
+    os.mkdir('./network')
 
 if __name__ == "__main__":
     env = SubprocVecEnv([lambda: wrap_env(gym.make('LunarLanderContinuous-v2'), Buffer(200000), delay=0.01)])
