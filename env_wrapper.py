@@ -1,17 +1,19 @@
 import gym
 import numpy as np
 import time
+import socket
+import pickle as pkl
 
 class wrap_env(gym.Env):
-    def __init__(self, env, buffer, delay):
+    def __init__(self, env, delay, port, model_env_info):
         self.env = env
-        self.buffer = buffer
-        self.buffer.load(None)
         self.delay = delay
         self.state = None
-
         self.observation_space = self.env.observation_space
         self.action_space = self.env.action_space
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket.bind(('', port))
+        self.model_env_info = model_env_info
 
     def step(self, action):
         time.sleep(self.delay)
@@ -24,7 +26,9 @@ class wrap_env(gym.Env):
             print("action is NAN!")
         if np.isnan(reward):
             print("reward is NAN!")
-        self.buffer.add({'state': self.state, 'action': action, 'next_state': state, 'reward': [reward], 'done': done})
+        data = {'state': self.state, 'action': action, 'next_state': state, 'reward': [reward], 'done': done}
+        for socket_info in self.model_env_info:
+            self.socket.sendto(pkl.dumps(data), socket_info)
         self.state = state
         return state, reward, done, info
 
@@ -35,6 +39,3 @@ class wrap_env(gym.Env):
 
     def render(self, mode='human'):
         self.env.render()
-
-    def buffer_save(self, name):
-        self.buffer.save(name)

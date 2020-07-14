@@ -1,14 +1,21 @@
 import numpy as np
 import pickle as pkl
+import socket
 
 
 class Buffer(object):
-    def __init__(self, max_len):
+    def __init__(self, max_len, socket_info):
         self.max_len = max_len
         self.state_data = []
         self.action_data = []
         self.reward_data = []
         self.next_state_data = []
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket.bind(socket_info)
+
+    def get_data(self):
+        data = self.socket.recv(4096)
+        self.add(pkl.loads(data))
 
     def add(self, new_trans):
         self.reward_data.append(new_trans['reward'])

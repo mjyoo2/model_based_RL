@@ -1,32 +1,38 @@
 import warnings
 import os
-warnings.filterwarnings('ignore')
-
-from stable_baselines.common.policies import MlpPolicy
-from stable_baselines.common.vec_env import VecNormalize, SubprocVecEnv
-from stable_baselines import PPO2
-from callback import CustomCallback
-from env_wrapper import wrap_env
-from buffer import Buffer
-
 import gym
 
-if not os.path.isdir('./replay_data'):
-    os.mkdir('./replay_data')
+warnings.filterwarnings('ignore')
 
-if not os.path.isdir('./mb_tensorboard'):
-    os.mkdir('./mb_tensorboard')
+from env_wrapper import wrap_env
+from stable_baselines.common.policies import MlpPolicy
+from stable_baselines import PPO2
+from stable_baselines.common.vec_env import SubprocVecEnv
+from buffer import Buffer
+from asyn_MB import AsynMB
+from callback import MBCallback, MainLearnerCallback
 
-if not os.path.isdir('./weights'):
-    os.mkdir('./weights')
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
-if not os.path.isdir('./mb_sub_tensorboard'):
-    os.mkdir('./mb_sub_tensorboard')
+real_env_info = {'socket_info' : ('127.0.0.1', 10010)}
+MBRL_info = {'socket_info' : ('127.0.0.1', 10020)}
+model_env_info = [('127.0.0.1', 10001), ('127.0.0.1', 10002),
+                  ('127.0.0.1', 10003), ('127.0.0.1', 10004)]
 
-if not os.path.isdir('./network'):
-    os.mkdir('./network')
-
-if __name__ == "__main__":
-    env = SubprocVecEnv([lambda: wrap_env(gym.make('LunarLanderContinuous-v2'), Buffer(200000), delay=0.01)])
+if __name__ =='__main__':
+    env = SubprocVecEnv([lambda: wrap_env(gym.make('LunarLanderContinuous-v2'), delay=0.01,
+                                          port=10080, model_env_info=model_env_info)])
     agent = PPO2(MlpPolicy, env, verbose=1, tensorboard_log='./mb_tensorboard')
-    agent.learn(total_timesteps=5000000, log_interval=10, callback=CustomCallback())
+    agent.learn(total_timesteps=5000000, log_interval=10,
+                callback=MainLearnerCallback(MBRL_info=MBRL_info, real_RL_info=real_env_info))
+    real_env = gym.make('LunarLanderContinuous-v2')
+    env_data = {'observation_space': real_env.observation_space, 'action_space': real_env.action_space}
+
+    env_list = []
+    for idx, info in enumerate(model_env_info):
+        env_list.append(lambda: AsynMB(env_data=env_data, name=str(idx), n_steps=256, socket_info=info))
+    MB_env = SubprocVecEnv(env_list)
+
+    agent = PPO2(MlpPolicy, MB_env, verbose=1, learning_rate=1e-4, tensorboard_log='./mb_sub_tensorboard')
+    agent.learn(total_timesteps=100000000, log_interval=10,
+                callback=MBCallback(MBRL_info=MBRL_info, real_RL_info=real_env_info))

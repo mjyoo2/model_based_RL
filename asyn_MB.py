@@ -1,22 +1,19 @@
 import numpy as np
 import gym
 import os
+from buffer import Buffer
 from network import Network
 
 
 class AsynMB(gym.Env):
-    def __init__(self, env_data, replay_buffer, n_steps, name, verbose=1):
-        self.replay_buffer = replay_buffer
+    def __init__(self, env_data, n_steps, socket_info, name, verbose=1):
+        self.replay_buffer = Buffer(200000, socket_info)
         self.observation_space = env_data['observation_space']
         self.action_space = env_data['action_space']
         self.state = None
         self.timesteps = 0
         self.verbose = verbose
         self.n_steps = n_steps
-        self.name = name
-
-        if not os.path.isdir('./weights/{}'.format(name)):
-            os.mkdir('./weights/{}'.format(name))
 
         action_shape = self.action_space.shape[0]
         state_shape = self.observation_space.shape[0]
@@ -27,9 +24,7 @@ class AsynMB(gym.Env):
                                           output_shape=next_state_shape, name='{}/next_state_network'.format(name))
 
     def train_network(self, train):
-        dir_list = os.listdir('./replay_data')
-        if 'data_{}.pkl'.format(self.name) in dir_list:
-            self.replay_buffer.load(self.name)
+        if self.replay_buffer.length > 50000:
             self.reward_network.reinit()
             self.next_state_network.reinit()
             state_data, action_data, next_state_data, reward_data = self.replay_buffer.get_dataset()

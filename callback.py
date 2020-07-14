@@ -2,30 +2,23 @@ from stable_baselines.common.callbacks import BaseCallback
 
 import os
 import pickle as pkl
+import socket
 
 class MBCallback(BaseCallback):
-    def __init__(self, verbose=0):
+    def __init__(self, real_RL_info, MBRL_info, verbose=0):
         super(MBCallback, self).__init__(verbose)
         self.callback_step = 0
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket.bind(MBRL_info['socket_info'])
+        self.real_RL_info = real_RL_info
 
     def _on_training_start(self) -> None:
         """
         This method is called before the first rollout starts.
         """
-        dir_list = os.listdir('./network')
-        if 'parameters.pkl' in dir_list:
-            while True:
-                try:
-                    with open('./network/parameters.pkl', 'rb') as f:
-                        parameters = pkl.load(f)
-                    break
-                except:
-                    pass
-            try:
-                os.remove('./network/parameters.pkl')
-            except:
-                pass
-        self.model.load_parameters(parameters)
+        data = pkl.loads(self.socket.recv(4096))
+        self.model.load_parameters(data)
+
 
     def _on_rollout_start(self) -> None:
         """
@@ -33,7 +26,6 @@ class MBCallback(BaseCallback):
         using the current policy.
         This event is triggered before collecting new samples.
         """
-
         while True:
             try:
                 self.model.env.env_method('train_network', 25)
@@ -56,45 +48,26 @@ class MBCallback(BaseCallback):
         return True
 
     def _on_rollout_end(self) -> None:
-        parameters = self.model.get_parameters()
-        with open('./network/mb_parameters.pkl', 'wb') as f:
-            pkl.dump(parameters, f)
-        dir_list = os.listdir('./network')
-        if 'parameters.pkl' in dir_list:
-            while True:
-                try:
-                    with open('./network/parameters.pkl', 'rb') as f:
-                        parameters = pkl.load(f)
-                    break
-                except:
-                    pass
-            try:
-                os.remove('./network/parameters.pkl')
-            except:
-                pass
-            self.model.load_parameters(parameters)
+        data = pkl.dumps(self.model.get_parameters())
+        self.socket.sendto(data, self.real_env_info['socket_info'])
 
     def _on_training_end(self) -> None:
         pass
 
-class CustomCallback(BaseCallback):
-    def __init__(self, verbose=0):
-        super(CustomCallback, self).__init__(verbose)
-        self.data_save_param = 1
-        self.alpha = 0.1
+class MainLearnerCallback(BaseCallback):
+    def __init__(self,  real_RL_info, MBRL_info, verbose=0):
+        super(MainLearnerCallback, self).__init__(verbose)
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket.bind(real_RL_info['socket_info'])
+        self.MBRL_info = MBRL_info
 
     def _on_training_start(self) -> None:
         """
         This method is called before the first rollout starts.
         """
-        parameters = self.model.get_parameters()
-        while True:
-            try:
-                with open('./network/parameters.pkl', 'wb') as f:
-                    pkl.dump(parameters, f)
-                break
-            except:
-                pass
+        data = pkl.dumps(self.model.get_parameters())
+        self.socket.sendto(data, self.MBRL_info['socket_info'])
+
 
     def _on_rollout_start(self) -> None:
         """
@@ -102,10 +75,7 @@ class CustomCallback(BaseCallback):
         using the current policy.
         This event is triggered before collecting new samples.
         """
-        if self.data_save_param * 25000 < self.num_timesteps:
-            self.model.env.env_method('buffer_save', self.data_save_param)
-            self.data_save_param += 1
-
+        pass
 
     def _on_step(self) -> bool:
         """
@@ -119,27 +89,8 @@ class CustomCallback(BaseCallback):
         return True
 
     def _on_rollout_end(self) -> None:
-        dir_list = os.listdir('./network')
-        if 'mb_parameters.pkl' in dir_list:
-            parameters = self.model.get_parameters()
-            while True:
-                try:
-                    with open('./network/mb_parameters.pkl', 'rb') as f:
-                        mb_parameters = pkl.load(f)
-                    break
-                except:
-                    pass
-            key = parameters.keys()
-            for layer_key in key:
-                parameters[layer_key] = (1 - self.alpha) * parameters[layer_key] + self.alpha * mb_parameters[layer_key]
-            self.model.load_parameters(parameters)
-            while True:
-                try:
-                    with open('./network/parameters.pkl', 'wb') as f:
-                        pkl.dump(parameters, f)
-                    break
-                except:
-                    pass
+        data = pkl.loads(self.socket.recv(4096))
+        self.model.load_parameters(data)
 
     def _on_training_end(self) -> None:
         pass
