@@ -1,5 +1,6 @@
 import numpy as np
 import gym
+import time
 import os
 from buffer import Buffer
 from network import Network
@@ -15,6 +16,9 @@ class AsynMB(gym.Env):
         self.verbose = verbose
         self.n_steps = n_steps
 
+        if not os.path.isdir('./weights/{}'.format(name)):
+            os.mkdir('./weights/{}'.format(name))
+
         action_shape = self.action_space.shape[0]
         state_shape = self.observation_space.shape[0]
         next_state_shape = self.observation_space.shape[0]
@@ -24,10 +28,11 @@ class AsynMB(gym.Env):
                                           output_shape=next_state_shape, name='{}/next_state_network'.format(name))
 
     def train_network(self, train):
-        if self.replay_buffer.length > 50000:
+        if self.replay_buffer.new_data > 20000:
             self.reward_network.reinit()
             self.next_state_network.reinit()
             state_data, action_data, next_state_data, reward_data = self.replay_buffer.get_dataset()
+            self.replay_buffer.locks = False
             self.reward_network.train(state_data, action_data, reward_data, training_epochs=train)
             self.next_state_network.train(state_data, action_data, next_state_data, training_epochs=train)
 
@@ -53,9 +58,11 @@ class AsynMB(gym.Env):
         return self.state.flatten()
 
     def reset(self):
+        while self.replay_buffer.length < 50000:
+            time.sleep(1)
         self.state = self.init_state()
         self.timesteps = 0
-
+        self.train_network(20)
         return self.state.flatten()
 
     def render(self, mode='human'):

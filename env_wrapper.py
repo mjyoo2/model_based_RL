@@ -12,7 +12,7 @@ class wrap_env(gym.Env):
         self.observation_space = self.env.observation_space
         self.action_space = self.env.action_space
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.bind(('', port))
+        self.socket.bind(('127.0.0.1', port))
         self.model_env_info = model_env_info
 
     def step(self, action):
