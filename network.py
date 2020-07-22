@@ -2,6 +2,7 @@ from keras.layers import Input, Dense, BatchNormalization, ReLU, Concatenate
 from keras.models import Model
 from keras.optimizers import Adam
 from keras.regularizers import l2
+from keras.layers import LeakyReLU
 
 import numpy as np
 import os
@@ -29,18 +30,20 @@ class Network(object):
 
     def build_network(self, layer_structure, last_activation):
         actions_input = Input(shape=(self.action_shape, ), name='action_input')
-        actions = Dense(32, activation='relu')(actions_input)
+        actions = Dense(32)(actions_input)
         actions = BatchNormalization()(actions)
-        actions = ReLU()(actions)
+        actions = LeakyReLU(alpha=0.1)(actions)
         states_input = Input(shape=(self.state_shape, ), name='state_input')
-        states = Dense(32, activation='relu', kernel_initializer='orthogonal', kernel_regularizer=l2(0.01))(states_input)
+        states = Dense(32, kernel_initializer='orthogonal', kernel_regularizer=l2(0.01))(states_input)
+        states = LeakyReLU(alpha=0.1)(states)
         states = BatchNormalization()(states)
         x = Concatenate()([actions, states])
-        x = Dense(64, activation='relu', kernel_initializer='orthogonal', kernel_regularizer=l2(0.01))(x)
+        x = Dense(64, kernel_initializer='orthogonal', kernel_regularizer=l2(0.01))(x)
+        x = LeakyReLU(alpha=0.1)(x)
         for dims in layer_structure:
             x = Dense(dims, kernel_initializer='orthogonal', kernel_regularizer=l2(0.01))(x)
+            x = LeakyReLU(alpha=0.1)(x)
             x = BatchNormalization()(x)
-            x = ReLU()(x)
         if last_activation is None:
             output = Dense(self.output_shape)(x)
         else:
