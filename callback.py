@@ -1,15 +1,13 @@
 from stable_baselines.common.callbacks import BaseCallback
 import pickle as pkl
-import socket
 from threading import Thread
 from config import *
+import zmq
 
 class MBCallback(BaseCallback):
     def __init__(self, real_RL_info, MBRL_info, verbose=0):
         super(MBCallback, self).__init__(verbose)
         self.callback_step = 0
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.bind(MBRL_info['socket_info'])
         self.real_RL_info = real_RL_info
         self.real_env_steps = 0
         self.num_updates = 0
@@ -17,12 +15,19 @@ class MBCallback(BaseCallback):
         self.get_data = False
         self.read_lock = False
         self.write_lock = False
+        ctx = zmq.Context()
+        self.recv_sock = ctx.socket(zmq.SUB)
+        self.recv_sock.connect('tcp://{}:{}'.format(real_RL_info[0], real_RL_info[1]))
+        self.recv_sock.setsockopt_string(zmq.SUBSCRIBE, '')
+
+        self.send_sock = ctx.socket(zmq.PUB)
+        self.send_sock.bind('tcp://*:{}'.format(MBRL_info[1]))
         recv_thread = Thread(target=self.recv_data, args=())
         recv_thread.start()
 
     def recv_data(self):
         while True:
-            data = pkl.loads(self.socket.recv(SOCKET_QUEUE_SIZE))
+            data = pkl.loads(self.recv_sock.recv(SOCKET_QUEUE_SIZE))
             while self.read_lock:
                 pass
             self.real_env_steps = data['steps']
@@ -62,7 +67,7 @@ class MBCallback(BaseCallback):
 
     def _on_rollout_end(self) -> None:
         data = pkl.dumps(self.model.get_parameters())
-        self.socket.sendto(data, self.real_RL_info['socket_info'])
+        self.send_sock.send(data)
         if self.get_data:
             self.read_lock = True
             while self.write_lock:
@@ -77,19 +82,26 @@ class MBCallback(BaseCallback):
 class MainLearnerCallback(BaseCallback):
     def __init__(self, real_RL_info, MBRL_info, verbose=0):
         super(MainLearnerCallback, self).__init__(verbose)
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.bind(real_RL_info['socket_info'])
         self.MBRL_info = MBRL_info
         self.recv_parameters = None
         self.get_data = False
         self.read_lock = False
         self.write_lock = False
+
+        ctx = zmq.Context()
+        self.recv_sock = ctx.socket(zmq.SUB)
+        self.recv_sock.connect('tcp://{}:{}'.format(MBRL_info[0], MBRL_info[1]))
+        self.recv_sock.setsockopt_string(zmq.SUBSCRIBE, '')
+
+        self.send_sock = ctx.socket(zmq.PUB)
+        self.send_sock.bind('tcp://*:{}'.format(real_RL_info[1]))
+
         recv_thread = Thread(target=self.recv_data, args=())
         recv_thread.start()
 
     def recv_data(self):
         while True:
-            data = pkl.loads(self.socket.recv(SOCKET_QUEUE_SIZE))
+            data = pkl.loads(self.recv_sock.recv())
             while self.read_lock:
                 pass
             self.write_lock = True
@@ -102,7 +114,7 @@ class MainLearnerCallback(BaseCallback):
         This method is called before the first rollout starts.
         """
         data = pkl.dumps({'steps': self.num_timesteps, 'parameters': self.model.get_parameters()})
-        self.socket.sendto(data, self.MBRL_info['socket_info'])
+        self.send_sock.send(data)
 
     def _on_rollout_start(self) -> None:
         """
@@ -129,7 +141,7 @@ class MainLearnerCallback(BaseCallback):
             self.read_lock = False
             self.get_data = False
             data = pkl.dumps({'steps': self.num_timesteps, 'parameters': self.model.get_parameters()})
-            self.socket.sendto(data, self.MBRL_info['socket_info'])
+            self.send_sock.send(data)
         return True
 
     def _on_rollout_end(self) -> None:

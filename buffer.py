@@ -3,6 +3,7 @@ import pickle as pkl
 import socket
 import copy
 
+from config import *
 from threading import Thread
 
 class Buffer(object):
@@ -24,7 +25,7 @@ class Buffer(object):
         while True:
             while self.read_lock:
                 pass
-            data = self.socket.recv(65536)
+            data = self.socket.recv(SOCKET_QUEUE_SIZE)
             self.write_lock = True
             self.add(pkl.loads(data))
             self.new_data += 1

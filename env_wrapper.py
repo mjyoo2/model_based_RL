@@ -13,6 +13,7 @@ class wrap_env(gym.Env):
         self.state = None
         self.observation_space = self.env.observation_space
         self.action_space = self.env.action_space
+
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.bind(('', port + 150 + env_port))
         self.model_env_info = model_env_info

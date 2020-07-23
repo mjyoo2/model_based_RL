@@ -6,8 +6,8 @@ port = 10001
 environment = lambda: gym.make('LunarLanderContinuous-v2')
 env_info = None
 
-real_env_info = {'socket_info': (real_env_ip, port + 10)}
-MBRL_info = {'socket_info': (model_env_ip, port + 20)}
+real_env_info = (real_env_ip, port + 10)
+MBRL_info = (model_env_ip, port + 20)
 model_env_info = [(model_env_ip, port), (model_env_ip, port + 1),
                   (model_env_ip, port + 2), (model_env_ip, port + 3)]
 
