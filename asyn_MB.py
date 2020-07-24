@@ -1,5 +1,4 @@
 import numpy as np
-import gym
 import time
 import os
 from buffer import Buffer
@@ -21,8 +20,13 @@ class AsynMB(gym.Env):
 
         if not os.path.isdir('./weights/{}'.format(name)):
             os.mkdir('./weights/{}'.format(name))
-
-        action_shape = self.action_space.shape[0]
+        if isinstance(self.action_space, gym.spaces.box.Box):
+            action_shape = self.action_space.shape[0]
+        elif isinstance(self.action_space, gym.spaces.discrete.Discrete):
+            action_shape = self.action_space.n
+        else:
+            print("action space isn't Box or Discrete")
+            action_shape = None
         state_shape = self.observation_space.shape[0]
         next_state_shape = self.observation_space.shape[0]
         self.reward_network = Network(layer_structure=MB_LAYER_STRUCTURE, action_shape=action_shape, state_shape=state_shape,

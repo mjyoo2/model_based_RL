@@ -16,7 +16,9 @@ class wrap_env(gym.Env):
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.bind(('', port + 150 + env_port))
-        self.model_env_info = model_env_info
+        self.model_env_info = []
+        for i in range(MB_ENV_NUM):
+            self.model_env_info.append((model_env_ip, port + i))
 
     def step(self, action):
         time.sleep(self.delay)

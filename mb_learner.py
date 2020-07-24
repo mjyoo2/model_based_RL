@@ -1,8 +1,5 @@
 import warnings
 import os
-import gym
-import socket
-import pickle as pkl
 
 warnings.filterwarnings('ignore')
 
@@ -15,20 +12,22 @@ from config import *
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
-if __name__ =='__main__':
-    if environment is None:
-        env_data = env_info
-    else:
-        env = environment()
-        env_data = {'observation_space': env.observation_space, 'action_space': env.action_space}
 
+def make_lambda_env(i, model_env_info):
+    return lambda: AsynMB(env_data=env_info, name=str(i), n_steps=MB_EPI_LENGTH, socket_info=model_env_info[i])
+
+
+if __name__ =='__main__':
     if not os.path.isdir('./mb/'):
         os.mkdir('./mb/')
 
-    env_list = [lambda: AsynMB(env_data=env_data, name='0', n_steps=128, socket_info=model_env_info[0]),
-                lambda: AsynMB(env_data=env_data, name='1', n_steps=128, socket_info=model_env_info[1]),
-                lambda: AsynMB(env_data=env_data, name='2', n_steps=128, socket_info=model_env_info[2]),
-                lambda: AsynMB(env_data=env_data, name='3', n_steps=128, socket_info=model_env_info[3])]
+    model_env_info = []
+    for i in range(MB_ENV_NUM):
+        model_env_info.append((model_env_ip, port + i))
+
+    env_list = []
+    for i in range(MB_ENV_NUM):
+        env_list.append(make_lambda_env(i, model_env_info))
 
     MB_env = SubprocVecEnv(env_list)
     mb_callback = MBCallback(MBRL_info=MBRL_info, real_RL_info=real_env_info)

@@ -1,4 +1,4 @@
-from keras.layers import Input, Dense, BatchNormalization, ReLU, Concatenate
+from keras.layers import Input, Dense, BatchNormalization, Concatenate
 from keras.models import Model
 from keras.optimizers import Adam
 from keras.regularizers import l2
@@ -34,7 +34,7 @@ class Network(object):
         actions = BatchNormalization()(actions)
         actions = LeakyReLU(alpha=0.1)(actions)
         states_input = Input(shape=(self.state_shape, ), name='state_input')
-        states = Dense(32, kernel_initializer='orthogonal', kernel_regularizer=l2(0.01))(states_input)
+        states = Dense(64, kernel_initializer='orthogonal', kernel_regularizer=l2(0.01))(states_input)
         states = LeakyReLU(alpha=0.1)(states)
         states = BatchNormalization()(states)
         x = Concatenate()([actions, states])
