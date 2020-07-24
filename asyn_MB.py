@@ -1,6 +1,9 @@
 import numpy as np
 import time
 import os
+import zmq
+import pickle as pkl
+
 from buffer import Buffer
 from network import Network
 from config import *
@@ -14,6 +17,15 @@ class AsynMB(gym.Env):
         self.timesteps = 0
         self.verbose = verbose
         self.n_steps = n_steps
+        self.updated = False
+        self.read_lock = False
+        self.write_lock = False
+        self.recv_weights = None
+
+        ctx = zmq.Context()
+        self.recv_sock = ctx.socket(zmq.SUB)
+        self.recv_sock.connect('tcp://{}:{}'.format(MBRL_info[0], MBRL_info[1]))
+        self.recv_sock.setsockopt_string(zmq.SUBSCRIBE, '')
 
         if not os.path.isdir('./weights'.format(name)):
             os.mkdir('./weights'.format(name))
@@ -27,6 +39,7 @@ class AsynMB(gym.Env):
         else:
             print("action space isn't Box or Discrete")
             action_shape = None
+
         state_shape = self.observation_space.shape[0]
         next_state_shape = self.observation_space.shape[0]
         self.reward_network = Network(layer_structure=MB_LAYER_STRUCTURE, action_shape=action_shape, state_shape=state_shape,
@@ -34,13 +47,27 @@ class AsynMB(gym.Env):
         self.next_state_network = Network(layer_structure=MB_LAYER_STRUCTURE, action_shape=action_shape, state_shape=state_shape,
                                           output_shape=next_state_shape, name='{}/next_state_network'.format(name))
 
-    def train_network(self, train):
-        self.reward_network.reinit()
-        self.next_state_network.reinit()
-        state_data, action_data, next_state_data, reward_data = self.replay_buffer.get_dataset()
-        self.replay_buffer.read_lock = False
-        self.reward_network.train(state_data, action_data, reward_data, training_epochs=train)
-        self.next_state_network.train(state_data, action_data, next_state_data, training_epochs=train)
+    def recv_data(self):
+        while True:
+            data = pkl.loads(self.recv_sock.recv())
+            while self.read_lock:
+                pass
+            self.write_lock = True
+            self.recv_parameters = data
+            self.write_lock = False
+            self.get_data = True
+
+    def get_weight(self):
+        if self.updated:
+            self.read_lock = True
+            while self.write_lock:
+                pass
+            self.reward_network.network.set_weights(self.recv_weights['reward_network'])
+            self.next_state_network.network.set_weights(self.recv_weights['next_state_network'])
+            self.read_lock = False
+            self.get_data = False
+            return True
+        return False
 
     def step(self, action):
         self.timesteps += 1
@@ -57,12 +84,6 @@ class AsynMB(gym.Env):
             done = True
         return self.state.flatten(), reward[0][0], done, info
 
-    def small_reset(self):
-        self.state = self.init_state()
-        self.timesteps = 0
-
-        return self.state.flatten()
-
     def reset(self):
         while self.replay_buffer.length < MB_START:
             time.sleep(1)
@@ -75,4 +96,3 @@ class AsynMB(gym.Env):
 
     def init_state(self):
         return self.replay_buffer.get_one()
-

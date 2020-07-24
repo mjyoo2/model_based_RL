@@ -1,10 +1,10 @@
 import numpy as np
 import pickle as pkl
-import socket
+import zmq
 import copy
 
-from config import *
 from threading import Thread
+
 
 class Buffer(object):
     def __init__(self, max_len, socket_info):
@@ -16,8 +16,10 @@ class Buffer(object):
         self.new_data = 0
         self.read_lock = False
         self.write_lock = False
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.bind(socket_info)
+
+        ctx = zmq.Context()
+        self.socket = ctx.socket(zmq.SUB)
+        self.socket.bind('tcp://{}:{}'.format(socket_info[0], socket_info[1]))
         getdata_thread = Thread(target=self.get_data, args=())
         getdata_thread.start()
 
@@ -25,7 +27,7 @@ class Buffer(object):
         while True:
             while self.read_lock:
                 pass
-            data = self.socket.recv(SOCKET_QUEUE_SIZE)
+            data = self.socket.recv()
             self.write_lock = True
             self.add(pkl.loads(data))
             self.new_data += 1
@@ -57,3 +59,4 @@ class Buffer(object):
     @property
     def length(self):
         return len(self.state_data)
+

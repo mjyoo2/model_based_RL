@@ -1,21 +1,22 @@
-import gym
 import numpy as np
 import time
-import socket
 import pickle as pkl
+import zmq
 
 from config import *
 
 class wrap_env(gym.Env):
-    def __init__(self, env, env_port):
+    def __init__(self, env):
         self.env = env
         self.delay = MAIN_ENV_DELAY
         self.state = None
         self.observation_space = self.env.observation_space
         self.action_space = self.env.action_space
 
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.bind(('', port + 150 + env_port))
+        ctx = zmq.Context()
+        self.send_sock = ctx.socket(zmq.PUB)
+        self.send_sock.connect('tcp://{}:{}'.format(model_env_ip, port+50))
+
         self.model_env_info = []
         for i in range(MB_ENV_NUM):
             self.model_env_info.append((model_env_ip, port + i))
@@ -32,8 +33,7 @@ class wrap_env(gym.Env):
         if np.isnan(reward):
             print("reward is NAN!")
         data = {'state': self.state, 'action': action, 'next_state': state, 'reward': [reward], 'done': done}
-        for socket_info in self.model_env_info:
-            self.socket.sendto(pkl.dumps(data), socket_info)
+        self.send_sock.sendto(pkl.dumps(data))
         self.state = state
         return state, reward, done, info
 

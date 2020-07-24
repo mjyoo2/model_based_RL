@@ -1,7 +1,15 @@
 import gym
 
-model_env_ip = '127.0.0.1'
+'''
+main_learner_port = port + 10
+model_based_learner_port = port + 20
+model_env_learner = port + 50
+
+'''
+
+model_RL_ip = '127.0.0.1'
 real_env_ip = '127.0.0.1'
+model_env_ip = '127.0.0.1'
 port = 10001
 environment = lambda: gym.make('LunarLanderContinuous-v2')
 env_info = {'action_space': gym.spaces.box.Box(low=0, high=1, shape=(2, )),
