@@ -55,7 +55,7 @@ class Network(object):
         action_data = np.array(action_data).reshape([-1, self.action_shape])
         state_data = np.array(state_data).reshape([-1, self.state_shape])
         output_data = np.array(output_data).reshape([-1, self.output_shape])
-        self.network.fit([action_data, state_data], output_data, nb_epoch=training_epochs, batch_size=1024, verbose=1)
+        self.network.fit([action_data, state_data], output_data, epochs=training_epochs, batch_size=1024, verbose=1)
         return
 
     def predict(self, state_data, action_data):

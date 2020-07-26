@@ -3,8 +3,9 @@ import gym
 '''
 main_learner_port = port + 10
 model_based_learner_port = port + 20
-model_env_learner = port + 50
-
+model_env_center_buffer_send_port = port + 30
+model_env_center_buffer_recv_port = port + 31
+model_env_learner = port + 50 + env_num
 '''
 
 model_RL_ip = '127.0.0.1'
@@ -23,13 +24,13 @@ AGGREGATION_RATE = 0.05
 IS_AGGREGATION_RATE_DECAY = True
 MAX_BUFFER_SIZE = 200000
 MB_START = 5000
-MB_LEARN_INTERVAL = 50000
+MB_LEARN_INTERVAL = 500000
 MB_LAYER_STRUCTURE = [64, 64]
 MAIN_ENV_DELAY = 0
 MAIN_ENV_NUM = 4
 MB_ENV_NUM = 4
-
 MB_EPI_LENGTH = 128
 MB_TRAINING_EPOCHS = 20
 MB_TIMESTEPS = 100000000
 MAIN_TIMESTEPS = 5000000
+INIT_STATE_BUFFER_SIZE = 1000

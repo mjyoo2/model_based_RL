@@ -10,7 +10,7 @@ class MBCallback(BaseCallback):
         self.callback_step = 0
         self.real_RL_info = real_RL_info
         self.real_env_steps = 0
-        self.num_updates = 0
+        # self.num_updates = 0
         self.recv_parameters = None
         self.get_data = False
         self.read_lock = False
@@ -47,11 +47,11 @@ class MBCallback(BaseCallback):
         using the current policy.
         This event is triggered before collecting new samples.
         """
-        if self.real_env_steps >= MB_LEARN_INTERVAL * self.num_updates + MB_START:
-            train = MB_TRAINING_EPOCHS
-            print('training..')
-            self.model.get_env().env_method(method_name='train_network', train=train)
-            self.num_updates += 1
+        # if self.real_env_steps >= MB_LEARN_INTERVAL * self.num_updates + MB_START:
+        #     train = MB_TRAINING_EPOCHS
+        #     print('training..')
+        #     self.model.get_env().env_method(method_name='train_network', train=train)
+        #     self.num_updates += 1
 
     def _on_step(self) -> bool:
         """

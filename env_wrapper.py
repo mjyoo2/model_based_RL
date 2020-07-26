@@ -15,11 +15,7 @@ class wrap_env(gym.Env):
 
         ctx = zmq.Context()
         self.send_sock = ctx.socket(zmq.PUB)
-        self.send_sock.connect('tcp://{}:{}'.format(model_env_ip, port+50))
-
-        self.model_env_info = []
-        for i in range(MB_ENV_NUM):
-            self.model_env_info.append((model_env_ip, port + i))
+        self.send_sock.connect('tcp://{}:{}'.format(model_env_ip, port+31))
 
     def step(self, action):
         time.sleep(self.delay)
@@ -33,7 +29,7 @@ class wrap_env(gym.Env):
         if np.isnan(reward):
             print("reward is NAN!")
         data = {'state': self.state, 'action': action, 'next_state': state, 'reward': [reward], 'done': done}
-        self.send_sock.sendto(pkl.dumps(data))
+        self.send_sock.send(pkl.dumps(data))
         self.state = state
         return state, reward, done, info
 

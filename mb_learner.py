@@ -13,8 +13,8 @@ from config import *
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 
-def make_lambda_env(i, model_env_info):
-    return lambda: AsynMB(env_data=env_info, name=str(i), n_steps=MB_EPI_LENGTH, socket_info=model_env_info[i])
+def make_lambda_env(i):
+    return lambda: AsynMB(env_data=env_info, name=i, n_steps=MB_EPI_LENGTH)
 
 
 if __name__ =='__main__':
@@ -27,7 +27,7 @@ if __name__ =='__main__':
 
     env_list = []
     for i in range(MB_ENV_NUM):
-        env_list.append(make_lambda_env(i, model_env_info))
+        env_list.append(make_lambda_env(i))
 
     MB_env = SubprocVecEnv(env_list)
     mb_callback = MBCallback(MBRL_info=MBRL_info, real_RL_info=real_env_info)

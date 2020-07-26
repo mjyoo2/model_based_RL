@@ -7,10 +7,11 @@ import pickle as pkl
 from buffer import Buffer
 from network import Network
 from config import *
+from threading import Thread
 
 class AsynMB(gym.Env):
-    def __init__(self, env_data, n_steps, socket_info, name, verbose=1):
-        self.replay_buffer = Buffer(MAX_BUFFER_SIZE, socket_info)
+    def __init__(self, env_data, n_steps, name, verbose=1):
+        self.replay_buffer = Buffer(INIT_STATE_BUFFER_SIZE)
         self.observation_space = env_data['observation_space']
         self.action_space = env_data['action_space']
         self.state = None
@@ -18,13 +19,15 @@ class AsynMB(gym.Env):
         self.verbose = verbose
         self.n_steps = n_steps
         self.updated = False
+        self.first_updated = False
         self.read_lock = False
         self.write_lock = False
         self.recv_weights = None
+        self.name = name
 
         ctx = zmq.Context()
         self.recv_sock = ctx.socket(zmq.SUB)
-        self.recv_sock.connect('tcp://{}:{}'.format(MBRL_info[0], MBRL_info[1]))
+        self.recv_sock.connect('tcp://{}:{}'.format(model_env_ip, port + 50 + name))
         self.recv_sock.setsockopt_string(zmq.SUBSCRIBE, '')
 
         if not os.path.isdir('./weights'.format(name)):
@@ -47,15 +50,25 @@ class AsynMB(gym.Env):
         self.next_state_network = Network(layer_structure=MB_LAYER_STRUCTURE, action_shape=action_shape, state_shape=state_shape,
                                           output_shape=next_state_shape, name='{}/next_state_network'.format(name))
 
+        recv_thread = Thread(target=self.recv_data, args=())
+        recv_thread.start()
+
+    def recv_data_handle(self, data):
+        if data['type'] == 'init_state':
+            self.replay_buffer.add(data['data'])
+        elif data['type'] == 'weights':
+            self.recv_weights = data
+            self.updated = True
+
     def recv_data(self):
         while True:
             data = pkl.loads(self.recv_sock.recv())
+            print(data['type'])
             while self.read_lock:
                 pass
             self.write_lock = True
-            self.recv_parameters = data
+            self.recv_data_handle(data)
             self.write_lock = False
-            self.get_data = True
 
     def get_weight(self):
         if self.updated:
@@ -65,7 +78,8 @@ class AsynMB(gym.Env):
             self.reward_network.network.set_weights(self.recv_weights['reward_network'])
             self.next_state_network.network.set_weights(self.recv_weights['next_state_network'])
             self.read_lock = False
-            self.get_data = False
+            self.updated = False
+            self.first_updated = True
             return True
         return False
 
@@ -85,8 +99,9 @@ class AsynMB(gym.Env):
         return self.state.flatten(), reward[0][0], done, info
 
     def reset(self):
-        while self.replay_buffer.length < MB_START:
-            time.sleep(1)
+        while not self.first_updated:
+            self.get_weight()
+        self.get_weight()
         self.state = self.init_state()
         self.timesteps = 0
         return self.state.flatten()
