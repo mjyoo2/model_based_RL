@@ -102,18 +102,10 @@ class CenterBuffer(object):
     def recv_data(self):
         while True:
             data = pkl.loads(self.recv_sock.recv())
-            while self.lock:
-                pass
-            self.lock = True
             self.sending_queue.append(data)
-            self.lock = False
 
     def send_data(self):
         while True:
-            while self.lock:
-                pass
-            self.lock = True
             if len(self.sending_queue) > 0:
                 self.send_sock.send(pkl.dumps(self.sending_queue[0]))
                 del self.sending_queue[0]
-            self.lock = False

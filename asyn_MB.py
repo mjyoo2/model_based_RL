@@ -59,11 +59,12 @@ class AsynMB(gym.Env):
         elif data['type'] == 'weights':
             self.recv_weights = data
             self.updated = True
+            print("new weight setting")
 
     def recv_data(self):
         while True:
             data = pkl.loads(self.recv_sock.recv())
-            print(data['type'])
+            
             while self.read_lock:
                 pass
             self.write_lock = True
@@ -87,7 +88,7 @@ class AsynMB(gym.Env):
         self.timesteps += 1
         done = False
         reward = self.reward_network.predict(self.state, action)
-        self.state = self.next_state_network.predict(self.state, action)
+        self.state = self.state + self.next_state_network.predict(self.state, action)
         for value in self.state.flatten():
             if np.isnan(value):
                 print('NAN!')

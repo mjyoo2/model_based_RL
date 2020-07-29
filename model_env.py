@@ -48,7 +48,8 @@ class ModelEnv(object):
 
     def run(self):
         while True:
-             if (self.start and self.replay_buffer.length >= MB_START) or self.replay_buffer.new_data >= MB_LEARN_INTERVAL:
+         
+            if (self.start and self.replay_buffer.length >= MB_START) or self.replay_buffer.new_data >= MB_LEARN_INTERVAL:
                 self.train_network(MB_TRAINING_EPOCHS)
                 self.start = False
 
@@ -57,7 +58,7 @@ class ModelEnv(object):
         self.reward_network.reinit()
         self.next_state_network.reinit()
         state_data, action_data, next_state_data, reward_data = self.replay_buffer.get_dataset()
-        self.replay_buffer.read_lock = False
+        
         self.reward_network.train(state_data, action_data, reward_data, training_epochs=epochs)
         self.next_state_network.train(state_data, action_data, next_state_data, training_epochs=epochs)
         data = {'type': 'weights',
@@ -67,6 +68,7 @@ class ModelEnv(object):
 
     def send_init_state(self):
         while True:
+            
             if self.replay_buffer.length > 100:
                 data = {'type': 'init_state', 'data': self.replay_buffer.get_batch()}
                 self.send_sock.send(pkl.dumps(data))

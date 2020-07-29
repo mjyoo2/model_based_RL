@@ -28,7 +28,7 @@ class wrap_env(gym.Env):
             print("action is NAN!")
         if np.isnan(reward):
             print("reward is NAN!")
-        data = {'state': self.state, 'action': action, 'next_state': state, 'reward': [reward], 'done': done}
+        data = {'state': self.state, 'action': action, 'next_state': state - self.state, 'reward': [reward], 'done': done}
         self.send_sock.send(pkl.dumps(data))
         self.state = state
         return state, reward, done, info

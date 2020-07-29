@@ -33,4 +33,4 @@ if __name__ =='__main__':
     mb_callback = MBCallback(MBRL_info=MBRL_info, real_RL_info=real_env_info)
 
     mb_agent = PPO2(MlpPolicy, MB_env, verbose=1, learning_rate=1e-4, tensorboard_log='./mb/')
-    mb_agent.learn(total_timesteps=MB_TIMESTEPS, log_interval=10, callback=mb_callback)
+    mb_agent.learn(total_timesteps=MB_TIMESTEPS, log_interval=1000, callback=mb_callback)
