@@ -10,7 +10,7 @@ class MBCallback(BaseCallback):
         self.callback_step = 0
         self.real_RL_info = real_RL_info
         self.real_env_steps = 0
-        self.num_updates = 0
+        # self.num_updates = 0
         self.recv_parameters = None
         self.get_data = False
         self.read_lock = False
@@ -47,11 +47,18 @@ class MBCallback(BaseCallback):
         using the current policy.
         This event is triggered before collecting new samples.
         """
-        if self.real_env_steps >= MB_LEARN_INTERVAL * self.num_updates + MB_START:
-            train = MB_TRAINING_EPOCHS
-            print('training..')
-            self.model.get_env().env_method(method_name='train_network', train=train)
-            self.num_updates += 1
+        if self.get_data:
+            self.read_lock = True
+            while self.write_lock:
+                pass
+            self.model.load_parameters(self.recv_parameters)
+            self.read_lock = False
+            self.get_data = False
+        # if self.real_env_steps >= MB_LEARN_INTERVAL * self.num_updates + MB_START:
+        #     train = MB_TRAINING_EPOCHS
+        #     print('training..')
+        #     self.model.get_env().env_method(method_name='train_network', train=train)
+        #     self.num_updates += 1
 
     def _on_step(self) -> bool:
         """
@@ -66,15 +73,9 @@ class MBCallback(BaseCallback):
         return True
 
     def _on_rollout_end(self) -> None:
-        data = pkl.dumps(self.model.get_parameters())
-        self.send_sock.send(data)
-        if self.get_data:
-            self.read_lock = True
-            while self.write_lock:
-                pass
-            self.model.load_parameters(self.recv_parameters)
-            self.read_lock = False
-            self.get_data = False
+        if not self.get_data:
+            data = pkl.dumps(self.model.get_parameters())
+            self.send_sock.send(data)
 
     def _on_training_end(self) -> None:
         pass

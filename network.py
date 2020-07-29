@@ -3,6 +3,7 @@ from keras.models import Model
 from keras.optimizers import Adam
 from keras.regularizers import l2
 from keras.layers import LeakyReLU
+from keras.callbacks import EarlyStopping
 
 import numpy as np
 import os
@@ -14,7 +15,7 @@ class Network(object):
         self.state_shape = state_shape
         self.output_shape = output_shape
         self.last_layer = last_layer
-
+        self.earlystop = EarlyStopping(monitor='val_loss', mode='min', patience=2, restore_best_weights=True)
         self.network = self.build_network(layer_structure, last_layer)
         self.network_compile(loss, Adam(learning_rate=0.001), metrics)
         self.save_path = './weights/{}/init_weight.hdf5'.format(name)
@@ -55,7 +56,8 @@ class Network(object):
         action_data = np.array(action_data).reshape([-1, self.action_shape])
         state_data = np.array(state_data).reshape([-1, self.state_shape])
         output_data = np.array(output_data).reshape([-1, self.output_shape])
-        self.network.fit([action_data, state_data], output_data, nb_epoch=training_epochs, batch_size=1024, verbose=1)
+        self.network.fit([action_data, state_data], output_data, validation_split=0.05, epochs=training_epochs,
+                         batch_size=1024, verbose=1, callbacks=[self.earlystop])
         return
 
     def predict(self, state_data, action_data):

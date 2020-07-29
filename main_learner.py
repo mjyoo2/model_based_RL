@@ -11,19 +11,11 @@ from config import *
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
-
-def make_lambda_env(i):
-    return lambda: wrap_env(environment(), env_port=i)
-
-
 if __name__ =='__main__':
     if not os.path.isdir('./main'):
         os.mkdir('./main')
 
-    env_list = []
-    for i in range(MAIN_ENV_NUM):
-        env_list.append(make_lambda_env(i))
-
+    env_list = [lambda: wrap_env(environment()) for i in range(MAIN_ENV_NUM)]
     main_callback = MainLearnerCallback(MBRL_info=MBRL_info, real_RL_info=real_env_info)
     env = SubprocVecEnv(env_list)
 
